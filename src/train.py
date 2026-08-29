@@ -4,7 +4,6 @@ import argparse
 from pathlib import Path
 import torch
 import torch.nn as nn
-import torch.amp as amp
 import yaml
 from dataset import get_dataloaders
 from model import get_model
@@ -23,7 +22,7 @@ def train_one_epoch(model, loader, optimizer, criterion, device, scaler, schedul
     for inputs, targets in loader:
         inputs, targets = inputs.to(device), targets.to(device)
         optimizer.zero_grad(set_to_none=True)
-        with amp.autocast(device_type=device.type, enabled=device.type == 'cuda'):
+        with torch.autocast(device_type=device.type, enabled=device.type == 'cuda'):
             outputs = model(inputs)
             loss = criterion(outputs, targets)
         scaler.scale(loss).backward()
@@ -66,7 +65,7 @@ def main():
         epochs=config["training"]["epochs"], steps_per_epoch=len(train_loader)
     )
     criterion = nn.CrossEntropyLoss()
-    scaler = amp.GradScaler(enabled=device.type == 'cuda')
+    scaler = torch.cuda.amp.GradScaler(enabled=device.type == 'cuda') 
     best_val_loss, patience_counter = float("inf"), 0
     checkpoint_dir = Path(config["output"]["checkpoint_dir"])
     checkpoint_dir.mkdir(parents=True, exist_ok=True)
