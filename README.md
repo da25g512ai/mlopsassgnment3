@@ -1,10 +1,10 @@
 # MLOps PyTorch Pipeline
 
-An end-to-end Machine Learning operations pipeline that deploys a PyTorch image classification model (ResNet-18) through a complete deployment lifecycle: from local development and Docker containerization to orchestrated training and autoscaled serving on Kubernetes.
+An end to end mlops pipeline that deploys a PyTorch image classification model (ResNet-18) through a complete deployment lifecycle from local development and Docker containerization to orchestrated training and autoscaled serving on Kubernetes has been implemented
 
 ## Architecture Diagram
 
-This project utilizes a decoupled GPU-training and CPU-serving architecture. The following diagram illustrates the flow of data and resources within the Kubernetes cluster.
+This project utilizes a GPU-training and CPU-serving architecture. The following diagram illustrates the flow of data and resources within the Kubernetes cluster.
 
 ```mermaid
 graph TD
@@ -40,19 +40,18 @@ graph TD
     User((Client)) -->|POST /predict| Svc
 ```
 
-*(Note: GitHub natively renders the Mermaid diagram above. If viewing locally, ensure your markdown viewer supports Mermaid.js).*
 
 ---
 
-## 🚀 Setup Instructions
+## Setup Instructions
 
 ### Prerequisites
-* **Docker Desktop** installed and running.
-* **Minikube** and **kubectl** installed.
-* **Python 3.11+** (for local testing).
+* Docker Desktop installed and running
+* Minikube and kubectl installed
+* Python 3.11+ (for local testing)
 
 ### 1. Initialize Cluster & Build Images
-To avoid massive image transfer times, point your local terminal to Minikube's internal Docker daemon and build the images directly inside the cluster.
+To avoid massive image transfer times point your local terminal to Minikube's internal Docker daemon and build the images directly inside the cluster
 
 ```bash
 # Start Minikube
@@ -64,12 +63,12 @@ eval $(minikube docker-env)
 # Build the GPU-optimized training image
 docker build -f docker/Dockerfile.train -t mlops-train:v1 .
 
-# Build the CPU-optimized, lightweight serving image
+# Build the CPU-optimized lightweight serving image
 docker build -f docker/Dockerfile.serve -t mlops-serve:v1 .
 ```
 
 ### 2. Launch the Training Job
-Deploy the storage, configuration, and batch job. The job will download the CIFAR-10 dataset, train the ResNet-18 model for 10 epochs, and save the weights to the persistent volume.
+Deploy the storage, configuration, and batch job. The job will download the CIFAR-10 dataset train the ResNet-18 model for 10 epochs and save the weights to the persistent volume
 
 ```bash
 # Apply infrastructure and training manifests
@@ -83,7 +82,7 @@ kubectl logs -f job/pytorch-training-job -n ml-training
 ```
 
 ### 3. Deploy the Serving API
-Once the training job logs indicate completion (`"event": "training_complete"`), deploy the FastAPI serving layer. This deployment mounts the volume as `readOnly` and utilizes an HPA to scale based on CPU utilization.
+Once the training job logs indicate completion (`"event": "training_complete"`), deploy the FastAPI serving layer. This deployment mounts the volume as readOnly and utilizes an HPA to scale based on CPU utilization.
 
 ```bash
 # Apply serving manifests
@@ -91,7 +90,7 @@ kubectl apply -f k8s/serving-deployment.yaml
 kubectl apply -f k8s/serving-service.yaml
 kubectl apply -f k8s/hpa.yaml
 
-# Wait for the pods to become ready (1/1)
+# Wait for the pods to become ready
 kubectl get pods -n ml-training -w
 ```
 
@@ -102,11 +101,8 @@ Forward the cluster service to your local machine and test the inference endpoin
 # Port-forward the API (run in a separate terminal or background)
 kubectl port-forward svc/model-serving 8080:80 -n ml-training &
 
-# Generate a dummy test image
-python3 -c "from PIL import Image; Image.new('RGB', (32, 32), color='blue').save('test_image.png')"
-
-# Send a prediction request
-curl -X POST http://localhost:8080/predict -F "image=@test_image.png"
+# Send a prediction request with the test image in repo
+curl -X POST http://localhost:8080/predict -F "image=@airplane.jpg"
 ```
 
 **Expected JSON Response:**
